@@ -38,7 +38,7 @@ class Chord:
     def get_main_note(self):
         return self.first_note % 12
 
-    def note_is_in_chord(self, note):
+    def has_note(self, note):
         return (self.first_note == note) or (self.second_note == note) or (self.third_note == note)
 
     def set_time(self, time):
@@ -179,26 +179,24 @@ def get_fitness(individual: List[Chord]) -> float:
     # - main chord not one-two octaves lower
     # - decrease the fitness by the mean deviation from mean note
     fitness = 0
+    i = 0  # range(0,15)
     for chord in individual:
-        i = 0  # range(0,15)
-        t = (i * 0.96)  # magic number here!
+        t = (i * chord_duration/1000)  # calculating the current time of the midi
         if (chord.get_main_note() == get_note_at_time(t) % 12) and (chord.first_note <= get_note_at_time(t)):
             fitness += 25
         # if chord.second_note % 12 == (get_note_at_time(t) % 12) or chord.third_note % 12 == (
         #         get_note_at_time(t) % 12):
         #     fitness += 10
 
-        if chord.note_is_in_chord(get_note_at_time(t)):
+        if chord.has_note(get_note_at_time(t)):
             fitness += 5
 
         if chord.first_note - 12 == get_note_at_time(t) :
             fitness += 25
-        elif chord.first_note - 24 == get_note_at_time(t):
-            fitness += 5
+        # elif chord.first_note - 24 == get_note_at_time(t):
+        #     fitness += 5
         else:
             fitness -= 10
-
-
 
         i += 1
 
@@ -279,13 +277,13 @@ def mutate(offsprings: List[List[Chord]]) -> List[List[Chord]]:
     return offsprings
 
 
-def replace_parents(population: List[List[Chord]], population_fitness: List[float], offsprings: List[List[Chord]],
+def replace_parents(population: List[List[Chord]], population_fitness_list: List[float], offsprings: List[List[Chord]],
                     offsprings_fitness: List[float], size: int) -> List[List[Chord]]:
     # replace "size" number of least fit population members
     # with most fit "size" offsprings
     # returns new population
-    sort_index = np.argsort(population_fitness)
-    sort_index = sort_index[-1::]
+    sort_index = np.argsort(population_fitness_list)
+    sort_index = sort_index[::-1]
     population_sorted = population
     c = 0
     for i in sort_index:
@@ -297,17 +295,27 @@ def replace_parents(population: List[List[Chord]], population_fitness: List[floa
     sort_index = np.argsort(offsprings_fitness)
 
     offsprings_sorted = offsprings
-    sort_index = sort_index[-1::]
+    sort_index = sort_index[::-1]
     c = 0
     for i in sort_index:
         temp_list = offsprings[i]
         offsprings_sorted[c] = temp_list
         c += 1
 
-    parents = population_sorted[size:]
-    offsprings = offsprings_sorted[-size:]
+    parents = population_sorted[:-size]  #
+    offsprings = offsprings_sorted[:size]
 
-    return offsprings+parents
+    # par_fit = population_fitness(parents)
+    # off_fit = population_fitness(offsprings)
+    res = parents+offsprings
+    # for j in parents:
+    #     res.append(i)
+    #
+    # for j in offsprings:
+    #     res.append(i)
+    # f = population_fitness(res)
+    # print(5)
+    return res
 
 
 def evolution(generations: int, population_size: int):
@@ -320,18 +328,16 @@ def evolution(generations: int, population_size: int):
         offsprings = mutate(offsprings)
         offsprings_fitness, offsprings_fitness_avg = population_fitness(offsprings)
         population = replace_parents(population, fitness, offsprings, offsprings_fitness, 5)
+        # f = population_fitness(population)
 
     return population
 
 
 mid = MidiFile('barbiegirl.mid', clip=True)
 
-generationss = 35
+generationss = 15
 populations = evolution(generationss, population_size=40)
 
-
-for i in populations:
-    print(get_fitness(i))
 
 mid2 = MidiFile()
 mid2.add_track()
