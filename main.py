@@ -4,7 +4,6 @@ import numpy as np
 import time
 from typing import Union, List, Tuple
 
-
 # divide song on pieces of 1/4 and create sequences of random chords
 # each sequence is a list of chords, each chord continues for 1/4
 # each sequence is an individual
@@ -47,8 +46,9 @@ class Chord:
     def get_octave(self):
         return self.first_note // 12
 
-    def equal_to(self,chord):
-        return (self.first_note == chord.first_note) and (self.second_note == chord.second_note) and (self.third_note == chord.third_note)
+    def equal_to(self, chord):
+        return (self.first_note == chord.first_note) and (self.second_note == chord.second_note) and (
+                    self.third_note == chord.third_note)
 
 
 def parse_midi(path):
@@ -106,6 +106,9 @@ def fun(name):
     return msgs
 
 
+lower_bound = 36
+upper_bound = 59
+
 def get_random_chord() -> Chord:
     n = np.random.randint(1, 6)  # randomly choose type of chords:
     # 1 - Major and Minor
@@ -117,11 +120,11 @@ def get_random_chord() -> Chord:
     if n == 1:
         m = np.random.randint(0, 2)  # random between major (0) and minor(1)
         if m == 0:  # major
-            note = np.random.randint(12, 59)  # creates chord based on random note
+            note = np.random.randint(lower_bound, upper_bound)  # creates chord based on random note
             chord = Chord(note, note + 4, note + 7, 11)
             return chord
         else:  # minor
-            note = np.random.randint(12, 59)  # creates chord based on random note
+            note = np.random.randint(lower_bound, upper_bound)  # creates chord based on random note
             chord = Chord(note, note + 3, note + 7, 12)
             return chord
     elif n == 2:
@@ -129,32 +132,32 @@ def get_random_chord() -> Chord:
         m = np.random.randint(0, 2)  # random between major (0) and minor(1)
         if inv == 1:
             if m == 0:  # major
-                note = np.random.randint(12, 47)
-                chord = Chord(note + 12, note + 4, note + 7, 2111)  # main note one octave above
+                note = np.random.randint(lower_bound, upper_bound)
+                chord = Chord(note + 4, note + 7, note + 12, 2111)  # main note one octave above
                 return chord
             else:  # minor
-                note = np.random.randint(12, 47)
-                chord = Chord(note + 12, note + 3, note + 7, 2112)  # main note one octave above
+                note = np.random.randint(lower_bound, upper_bound)
+                chord = Chord(note + 3, note + 7, note + 12, 2112)  # main note one octave above
                 return chord
         else:
             if m == 0:  # major
-                note = np.random.randint(12, 42)
-                chord = Chord(note + 12, note + 16, note + 7, 2211)  # main note and middle note are one octave above
+                note = np.random.randint(lower_bound, upper_bound)
+                chord = Chord(note + 7, note + 12, note + 16, 2211)  # main note and middle note are one octave above
                 return chord
             else:  # minor
-                note = np.random.randint(12, 42)
-                chord = Chord(note + 12, note + 16, note + 7, 2212)  # main note and middle note are one octave above
+                note = np.random.randint(lower_bound, upper_bound)
+                chord = Chord(note + 7, note + 12, note + 15, 2212)  # main note and middle note are one octave above
                 return chord
     elif n == 3:
-        note = np.random.randint(12, 59)
+        note = np.random.randint(lower_bound, upper_bound)
         chord = Chord(note, note + 3, note + 6, 3)
         return chord
     elif n == 4:
-        note = np.random.randint(12, 59)
+        note = np.random.randint(lower_bound, upper_bound)
         chord = Chord(note, note + 2, note + 7, 4)
         return chord
     elif n == 5:
-        note = np.random.randint(12, 59)
+        note = np.random.randint(lower_bound, upper_bound)
         chord = Chord(note, note + 5, note + 7, 5)
         return chord
 
@@ -181,22 +184,22 @@ def get_fitness(individual: List[Chord]) -> float:
     fitness = 0
     i = 0  # range(0,15)
     for chord in individual:
-        t = (i * chord_duration/1000)  # calculating the current time of the midi
+        t = (i * chord_duration / 1000)  # calculating the current time of the midi
         if (chord.get_main_note() == get_note_at_time(t) % 12) and (chord.first_note <= get_note_at_time(t)):
-            fitness += 25
-        # if chord.second_note % 12 == (get_note_at_time(t) % 12) or chord.third_note % 12 == (
-        #         get_note_at_time(t) % 12):
-        #     fitness += 10
+            fitness += 20
+        if chord.second_note % 12 == (get_note_at_time(t) % 12) or chord.third_note % 12 == (
+                get_note_at_time(t) % 12):
+            fitness += 10
 
         if chord.has_note(get_note_at_time(t)):
-            fitness += 5
+            fitness += 10
 
-        if chord.first_note - 12 == get_note_at_time(t) :
-            fitness += 25
+        # if chord.first_note - 12 == get_note_at_time(t):
+        #     fitness += 15
         # elif chord.first_note - 24 == get_note_at_time(t):
         #     fitness += 5
-        else:
-            fitness -= 10
+        # else:
+        #     fitness -= 10
 
         i += 1
 
@@ -204,19 +207,25 @@ def get_fitness(individual: List[Chord]) -> float:
     # if individual[0].equal_to(individual[-1]) :
     #     fitness += 40
 
-
-    # fitness /= 10
     # calc mean note
     sum = 0
     for i in individual:
         sum += i.first_note
-    mean_note = sum/chord_numbers
+    mean_note = sum / chord_numbers
     mean_deviation = 0
     for i in individual:
-        mean_deviation += (i.first_note-mean_note)**2
+        mean_deviation += (i.first_note - mean_note) ** 2
 
-    fitness -= (mean_deviation**0.5)/2
-    print("mean_deviation: ", (mean_deviation**0.5)/2)
+    mean_deviation = mean_deviation ** 0.5
+
+    max_deviation = 0
+    for i in individual:
+        max_deviation = max(max_deviation, max((abs(mean_deviation-i.first_note), abs(mean_deviation-i.third_note))))
+
+    fitness -= mean_deviation * 6
+    fitness -= max_deviation * 4
+    print("mean_deviation: ", mean_deviation)
+    print("max_deviation: ", max_deviation)
     print("fitness: ", fitness)
 
     return fitness
@@ -272,8 +281,27 @@ def mutate(offsprings: List[List[Chord]]) -> List[List[Chord]]:
     #     n = np.random.randint(chord_numbers)
     #     offsprings[i][n] = get_random_chord()
 
-    i = np.random.randint(len(offsprings) - 1)
-    offsprings[i] = get_individual()
+    ind_n = np.random.randint(len(offsprings))
+    for g in range(ind_n):
+        i = np.random.randint(len(offsprings) - 1)
+        offsprings[i] = get_individual()
+
+    # changing several chords in several individuals from offspring list
+    # n = 2  # choosing number of individuals
+    # for j in range(n):
+    #     chord_n = 3  # choosing number of chords
+    #     ind_n = np.random.randint(len(offsprings))
+    #     for g in range(chord_n):
+    #         i = np.random.randint(chord_numbers)  # choosing the positions
+    #         offsprings[ind_n][i] = get_random_chord()
+
+    # change several chords in all offsprings
+    # for i in offsprings:
+    #     # n = np.random.randint(chord_numbers)
+    #     for j in range(2):
+    #         g = np.random.randint(chord_numbers)
+    #         offsprings[j][g] = get_random_chord()
+
     return offsprings
 
 
@@ -307,7 +335,7 @@ def replace_parents(population: List[List[Chord]], population_fitness_list: List
 
     # par_fit = population_fitness(parents)
     # off_fit = population_fitness(offsprings)
-    res = parents+offsprings
+    res = parents + offsprings
     # for j in parents:
     #     res.append(i)
     #
@@ -324,10 +352,10 @@ def evolution(generations: int, population_size: int):
     for generation in range(generations):
         print(generation)
         fitness, avg_fitness = population_fitness(population)
-        offsprings = crossover(population, fitness, 10)
+        offsprings = crossover(population, fitness, 30)
         offsprings = mutate(offsprings)
         offsprings_fitness, offsprings_fitness_avg = population_fitness(offsprings)
-        population = replace_parents(population, fitness, offsprings, offsprings_fitness, 5)
+        population = replace_parents(population, fitness, offsprings, offsprings_fitness, 10)
         # f = population_fitness(population)
 
     return population
@@ -335,9 +363,8 @@ def evolution(generations: int, population_size: int):
 
 mid = MidiFile('barbiegirl.mid', clip=True)
 
-generationss = 15
+generationss = 25
 populations = evolution(generationss, population_size=40)
-
 
 mid2 = MidiFile()
 mid2.add_track()
