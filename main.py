@@ -2,6 +2,7 @@ import mido
 from mido import MidiFile, Message
 import numpy as np
 import time
+import pretty_midi
 from typing import Union, List, Tuple
 
 # divide song on pieces of 1/4 and create sequences of random chords
@@ -14,10 +15,45 @@ from typing import Union, List, Tuple
 chord_duration = 960
 chord_numbers = 8
 
+minor_keys = {
+    "Cm": ["Cm", "Do", "Eb", "Fm", "Gm", "Ab", "Bb"],
+    "C#m": ["C#m", "D#o", "E", "F#m", "G#m", "A", "B"],
+    "Dm": ["Dm", "Eo", "F", "Gm", "Am", "Bb", "C"],
+    "D#m": ["D#m", "E#o", "F#", "G#m", "A#m", "B", "C#"],
+    "Ebm": ["Ebm", "Fo", "Gb", "Abm", "Bbm", "Cb", "Db"],
+    "Em": ["Em", "F#o", "G", "Am", "Bm", "C", "D"],
+    "Fm": ["Fm", "Go", "Ab", "Bbm", "Cm", "Db", "Eb"],
+    "F#m": ["F#m", "G#o", "A", "Bm", "C#m", "D", "E"],
+    "Gm": ["Gm", "Ao", "Bb", "Cm", "Dm", "Eb", "F"],
+    "G#m": ["G#m", "A#o", "B", "C#m", "D#m", "E", "F#"],
+    "Abm": ["Abm", "Bbo", "Cb", "Dbm", "Ebm", "Fb", "Gb"],
+    "Am": ["Am", "Bo", "C", "Dm", "Em", "F", "G"],
+    "A#m": ["A#m", "B#o", "C#", "D#m", "E#m", "F#", "G#"],
+    "Bbm": ["Bbm", "Co", "Db", "Ebm", "Fm", "Gb", "Ab"],
+    "Bm": ["Bm", "C#o", "D", "Em", "F#m", "G", "A"]
+}
+
+major_keys = {
+    "C": ["C", "Dm", "Em", "F", "G", "Am", "Bo"],
+    "C#": ["C#", "D#m", "E#m", "F#", "G#", "A#m", "B#o"],
+    "Db": ["Db", "Ebm", "Fm", "Gb", "Ab", "Bbm", "Co"],
+    "D": ["D", "Em", "F#m", "G", "A", "Bm", "C#o"],
+    "Eb": ["Eb", "Fm", "Gm", "Ab", "Bb", "Cm", "Do"],
+    "E": ["E", "F#m", "G#m", "A", "B", "C#m", "D#o"],
+    "F": ["F", "Gm", "Am", "Bb", "C", "Dm", "Eo"],
+    "F#": ["F#", "G#m", "A#m", "B", "C#", "D#m", "E#o"],
+    "Gb": ["Gb", "Abm", "Bbm", "Cb", "Db", "Ebm", "Fo"],
+    "G": ["G", "Am", "Bm", "C", "D", "Em", "F#o"],
+    "Ab": ["Ab", "Bbm", "Cm", "Db", "Eb", "Fm", "Go"],
+    "A": ["A", "Bm", "C#m", "D", "E", "F#m", "G#o"],
+    "Bb": ["Bb", "Cm", "Dm", "Eb", "F", "Gm", "Ao"],
+    "B": ["B", "C#m", "D#m", "E", "F#", "G#m", "A#o"]
+}
+
 
 class Chord:
     # notes are integers
-    def __init__(self, a, b, c, chord_type):
+    def __init__(self, a, b, c, type):
         self.first_note = a
         self.second_note = b
         self.third_note = c
@@ -31,7 +67,8 @@ class Chord:
         # 3 - diminished chords (DIM)
         # 4 - suspended second chords (SUS2)
         # 5 - suspended fourth chords (SUS4)
-        self.chord_type = chord_type
+        self.type = type
+        self.main_note_str = pretty_midi.note_number_to_name(a)
 
     # returns main note (A,B,C...) in integer
     def get_main_note(self):
@@ -48,7 +85,10 @@ class Chord:
 
     def equal_to(self, chord):
         return (self.first_note == chord.first_note) and (self.second_note == chord.second_note) and (
-                    self.third_note == chord.third_note)
+                self.third_note == chord.third_note)
+
+    def main_note_name(self):
+        return pretty_midi.note_number_to_name(self.get_main_note())[:-1]
 
 
 def parse_midi(path):
@@ -94,9 +134,11 @@ def parse_midi(path):
 
 
 def get_note_at_time(t):
+    mid = None
     for i in parse_midi(mid):
         if round(i[0], 2) <= t <= round(i[1], 2):
             return int(i[2])
+    return -1
 
 
 def fun(name):
@@ -106,8 +148,9 @@ def fun(name):
     return msgs
 
 
-lower_bound = 36
+lower_bound = 36  # 36
 upper_bound = 59
+
 
 def get_random_chord() -> Chord:
     n = np.random.randint(1, 6)  # randomly choose type of chords:
@@ -172,6 +215,20 @@ def get_individual() -> List[Chord]:
     return accompaniment
 
 
+def rotate(l, n):
+    return l[n:] + l[:n]
+
+
+def key_to_chords(key):
+    chords = ["A", "B", "C", "D", "E", "F", "G"]
+    shift_index = chords.index(key[0])
+
+    if len(key) != 1 and key[1] == "#":
+        chords = [f"{chord}#" for chord in chords]
+    chords = rotate(chords, shift_index)
+    return chords
+
+
 # should return the fitness of a given sequence
 def get_fitness(individual: List[Chord]) -> float:
     # fitness of one individual
@@ -207,6 +264,19 @@ def get_fitness(individual: List[Chord]) -> float:
     # if individual[0].equal_to(individual[-1]) :
     #     fitness += 40
 
+    # main note of the first chord in each individual defines the tone of the accompaniment
+    # main note of the first chord should correspond to first note of the melody
+    # individual gets points for accordance with tone
+    key_chord = individual[0]
+    if key_chord.get_main_note() == get_note_at_time(0) % 12:
+        fitness += 20
+
+    for chord in individual:
+        # define minor keys first
+        if chord.get_main_note() == key_chord.get_main_note() and chord.type == key_chord.type:
+            fitness += 15
+        # elif
+
     # calc mean note
     sum = 0
     for i in individual:
@@ -216,11 +286,12 @@ def get_fitness(individual: List[Chord]) -> float:
     for i in individual:
         mean_deviation += (i.first_note - mean_note) ** 2
 
-    mean_deviation = mean_deviation ** 0.5
+    mean_deviation **= 0.5
 
     max_deviation = 0
     for i in individual:
-        max_deviation = max(max_deviation, max((abs(mean_deviation-i.first_note), abs(mean_deviation-i.third_note))))
+        max_deviation = max(max_deviation,
+                            max((abs(mean_deviation - i.first_note), abs(mean_deviation - i.third_note))))
 
     fitness -= mean_deviation * 6
     fitness -= max_deviation * 4
@@ -359,7 +430,6 @@ def evolution(generations: int, population_size: int):
         # f = population_fitness(population)
 
     return population
-
 
 mid = MidiFile('barbiegirl.mid', clip=True)
 
