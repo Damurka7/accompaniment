@@ -133,20 +133,20 @@ def get_random_chord() -> Chord:
         if inv == 1:
             if m == 0:  # major
                 note = np.random.randint(lower_bound, upper_bound)
-                chord = Chord(note + 4, note + 7, note + 12, 2111)  # main note one octave above
+                chord = Chord(note, note + 3, note + 9, 2111)  # main note one octave above
                 return chord
             else:  # minor
                 note = np.random.randint(lower_bound, upper_bound)
-                chord = Chord(note + 3, note + 7, note + 12, 2112)  # main note one octave above
+                chord = Chord(note, note + 4, note + 9, 2112)  # main note one octave above
                 return chord
         else:
             if m == 0:  # major
                 note = np.random.randint(lower_bound, upper_bound)
-                chord = Chord(note + 7, note + 12, note + 16, 2211)  # main note and middle note are one octave above
+                chord = Chord(note, note + 5, note + 11, 2211)  # major second inversion (-7 to each note)
                 return chord
             else:  # minor
                 note = np.random.randint(lower_bound, upper_bound)
-                chord = Chord(note + 7, note + 12, note + 15, 2212)  # main note and middle note are one octave above
+                chord = Chord(note, note + 5, note + 8, 2212)  # main note and middle note are one octave above
                 return chord
     elif n == 3:
         note = np.random.randint(lower_bound, upper_bound)
@@ -352,7 +352,7 @@ def evolution(generations: int, population_size: int):
     for generation in range(generations):
         print(generation)
         fitness, avg_fitness = population_fitness(population)
-        offsprings = crossover(population, fitness, 30)
+        offsprings = crossover(population, fitness, 20)
         offsprings = mutate(offsprings)
         offsprings_fitness, offsprings_fitness_avg = population_fitness(offsprings)
         population = replace_parents(population, fitness, offsprings, offsprings_fitness, 10)
