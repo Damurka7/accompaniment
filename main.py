@@ -142,7 +142,7 @@ def get_random_chord() -> Chord:
         else:
             if m == 0:  # major
                 note = np.random.randint(lower_bound, upper_bound)
-                chord = Chord(note, note + 5, note + 11, 2211)  # major second inversion (-7 to each note)
+                chord = Chord(note, note + 3, note + 9, 2211)  # major second inversion (-7 to each note)
                 return chord
             else:  # minor
                 note = np.random.randint(lower_bound, upper_bound)
